@@ -1,28 +1,34 @@
-from shiny import App, render, ui
+from shiny import App, render, ui, reactive
 import duckdb
 import pandas as pd
 import plotly.express as px
+from shinywidgets import output_widget, render_widget
 
 # Connect to the DuckDB database
 con = duckdb.connect("data/github.duckdb")
+DB_PATH = "data/github.duckdb"
 
-# Define the UI
 app_ui = ui.page_fluid(
     ui.h1("GitHub Events Dashboard"),
     ui.navset_tab(
-        ui.nav("Event Types Distribution", ui.output_plot("event_types_plot")),
-        ui.nav("Top Repositories", ui.output_plot("top_repos_plot")),
-        ui.nav("Events Over Time", ui.output_plot("events_over_time_plot")),
-        ui.nav("Top Organizations", ui.output_plot("top_orgs_plot")),
-        ui.nav("Ref Type Distribution", ui.output_plot("ref_type_plot")),
+        ui.nav_panel("Event Types Distribution", output_widget("event_types_plot")),
+        ui.nav_panel("Top Organizations", output_widget("top_orgs_plot")),
+        ui.nav_panel("Ref Type Distribution", output_widget("ref_type_plot")),
+        ui.nav_panel("Top Repositories", output_widget("top_repos_plot"))
     ),
 )
 
 # Define the server logic
 def server(input, output, session):
+
+    # Poll the database every 30 seconds for changes
+    @reactive.poll(lambda:30)
+    def get_connection():
+        return duckdb.connect(DB_PATH, read_only=True)
+
     # Event Types Distribution
     @output
-    @render.plot
+    @render_widget
     def event_types_plot():
         df_event_types = con.execute("""
             SELECT type, COUNT(*) AS count
@@ -34,23 +40,10 @@ def server(input, output, session):
         fig = px.bar(df_event_types, x="type", y="count", title="Event Types Distribution")
         return fig
 
-    # Events Over Time
-    @output
-    @render.plot
-    def events_over_time_plot():
-        df_events_over_time = con.execute("""
-            SELECT DATE_TRUNC('hour', CAST(created_at AS TIMESTAMP)) AS hour, COUNT(*) AS events
-            FROM events
-            WHERE created_at IS NOT NULL
-            GROUP BY hour
-            ORDER BY hour
-        """).fetchdf()
-        fig = px.line(df_events_over_time, x="hour", y="events", title="Events Over Time")
-        return fig
 
     # Top Organizations by Event Count
     @output
-    @render.plot
+    @render_widget
     def top_orgs_plot():
         df_top_orgs = con.execute("""
             SELECT org, COUNT(*) AS count
@@ -65,7 +58,7 @@ def server(input, output, session):
 
     # Ref Type Distribution
     @output
-    @render.plot
+    @render_widget
     def ref_type_plot():
         df_ref_type = con.execute("""
             SELECT ref_type, COUNT(*) AS count
