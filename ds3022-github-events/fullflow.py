@@ -59,15 +59,35 @@ def load_and_flatten(path):
 @task
 def append_duckdb(df):
     conn = duckdb.connect(DB_PATH)
+
+    # Create the table with a primary key on 'id' if it doesn't exist
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS events AS SELECT * FROM df WHERE 1=0
-    """)  # Create the table if it doesn't exist
+        CREATE TABLE IF NOT EXISTS events (
+            id VARCHAR PRIMARY KEY,
+            type VARCHAR,
+            repo VARCHAR,
+            actor VARCHAR,
+            org VARCHAR,
+            created_at TIMESTAMP,
+            action VARCHAR,
+            ref VARCHAR,
+            ref_type VARCHAR,
+            inserted_at TIMESTAMP
+        )
+    """)
+
+    # Register the new dataframe
     conn.register("df_view", df)
+
+    # Insert only new rows (ignore duplicates)
     conn.execute("""
-        INSERT INTO events SELECT * FROM df_view
-    """)  # Append the data
+        INSERT OR REPLACE INTO events
+        SELECT * FROM df_view
+    """)
+
     conn.close()
-    print(f"[+] Appended {len(df)} rows to DuckDB")
+    print(f"[+] Upserted {len(df)} rows into DuckDB (no duplicates).")
+
 
 # ---------------------------------------
 # Flow Definition
