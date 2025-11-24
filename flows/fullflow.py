@@ -106,27 +106,23 @@ def flatten_events(events, repo_name):
     return pd.DataFrame(rows)
 
 
+from prefect_aws import AwsCredentials
+from prefect_aws.s3 import S3Bucket
+
 @task
 def append_duckdb_s3(df):
-    """Append a DataFrame to the DuckDB stored in S3."""
-    # Connect to an *in-memory* database first
-    conn = duckdb.connect(":memory:")
 
-    # Enable S3 support
-    conn.execute("INSTALL httpfs;")
-    conn.execute("LOAD httpfs;")
-    conn.execute(f"SET s3_region='{AWS_REGION}';")
-    conn.execute(f"SET s3_access_key_id='{AWS_ACCESS_KEY}';")
-    conn.execute(f"SET s3_secret_access_key='{AWS_SECRET_KEY}';")
+    # Load AWS credentials and S3 bucket block
+    aws_creds = AwsCredentials.load("aws-creds")
+    s3 = S3Bucket.load("dp3-bucket")
 
-    # Try loading existing DB (if exists)
-    try:
-        conn.execute(f"IMPORT DATABASE '{S3_DB_PATH}';")
-        print("Loaded existing DuckDB from S3.")
-    except Exception:
-        print("No existing DB — creating new one.")
+    # This is your S3 DuckDB destination folder
+    S3_DB_PATH = "s3://mistelehendershot-dp3/github.duckdb/"
 
-    # Ensure table exists
+    # 1. Create or connect to a local DuckDB file inside the container
+    conn = duckdb.connect("local.duckdb")
+
+    # 2. Make table if missing
     conn.execute("""
         CREATE TABLE IF NOT EXISTS events (
             id VARCHAR,
@@ -139,18 +135,27 @@ def append_duckdb_s3(df):
             ref VARCHAR,
             ref_type VARCHAR,
             inserted_at TIMESTAMP
+        )
+    """)
+
+    # 3. Insert data
+    conn.register("df_view", df)
+    conn.execute("INSERT INTO events SELECT * FROM df_view")
+
+    # 4. Export to S3 (THIS is the important part)
+    conn.execute(f"""
+        EXPORT DATABASE '{S3_DB_PATH}'
+        (
+            FORMAT PARQUET,
+            AWS_REGION 'us-east-1',
+            AWS_ACCESS_KEY_ID '{aws_creds.access_key}',
+            AWS_SECRET_ACCESS_KEY '{aws_creds.secret_access_key}'
         );
     """)
 
-    # Append data
-    conn.register("df_view", df)
-    conn.execute("INSERT INTO events SELECT * FROM df_view;")
-
-    # Export UPDATED database to S3
-    conn.execute(f"EXPORT DATABASE '{S3_DB_PATH}' (FORMAT PARQUET);")
-
     conn.close()
-    print(f"[+] Inserted {len(df)} rows into DuckDB (S3).")
+    print("✓ Exported DuckDB database to S3")
+
 
 
 # -------------------------

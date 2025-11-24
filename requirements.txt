@@ -5,3 +5,4 @@ prefect
 plotly
 shiny
 shinywidgets
+prefect-aws
