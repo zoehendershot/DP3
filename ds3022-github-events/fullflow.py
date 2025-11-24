@@ -4,17 +4,18 @@ import requests, os, time, pandas as pd, duckdb
 from datetime import datetime, timezone
 
 REPOS = [
-    "pandas-dev/pandas",
-    "tensorflow/tensorflow",
+    "torvalds/linux",
     "microsoft/vscode",
     "facebook/react",
-    "torvalds/linux",
     "pytorch/pytorch",
-    "apache/spark",
     "kubernetes/kubernetes",
-    "numpy/numpy",
-    "golang/go"
+    "vercel/next.js",
+    "flutter/flutter",
+    "apache/spark",
+    "ansible/ansible",
+    "godotengine/godot"
 ]
+
 
 BASE_URL = "https://api.github.com/repos/{repo}/events"
 DB_PATH = "data/github.duckdb"
