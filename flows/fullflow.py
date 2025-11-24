@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from prefect import flow, task
-import requests, os, time, pandas as pd, duckdb
+import requests, time, pandas as pd, duckdb
 from datetime import datetime, timezone
+from prefect.blocks.system import Secret
 
 REPOS = [
     "torvalds/linux",
@@ -20,10 +21,14 @@ REPOS = [
 BASE_URL = "https://api.github.com/repos/{repo}/events"
 DB_PATH = "data/github.duckdb"
 
-TOKEN = os.getenv("GITHUB_TOKEN")
-headers = {"Accept": "application/vnd.github+json"}
-if TOKEN:
-    headers["Authorization"] = f"Bearer {TOKEN}"
+secret_block = Secret.load("github-pat")
+
+# Access the stored secret
+TOKEN = secret_block.get()
+headers = {
+    "Accept": "application/vnd.github+json",
+    "Authorization": f"Bearer {TOKEN}"
+}
 
 RECORD_LIMIT = 300
 SLEEP_AFTER_RUN = 120
