@@ -1,0 +1,7 @@
+pandas
+requests
+duckdb
+prefect
+plotly
+shiny
+shinywidgets
