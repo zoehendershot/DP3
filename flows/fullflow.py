@@ -27,8 +27,6 @@ AWS_REGION = "us-east-1"
 
 # Load secrets from Prefect Cloud
 GITHUB_PAT = Secret.load("github-pat").get()
-AWS_ACCESS_KEY = Secret.load("aws-pubkey").get()
-AWS_SECRET_KEY = Secret.load("aws-secretkey").get()
 
 headers = {
     "Accept": "application/vnd.github+json",
