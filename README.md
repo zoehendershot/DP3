@@ -25,4 +25,4 @@ pip install -r requirements.txt
 ```
 - Create and run a local prefect server using `prefect server start` command in the terminal. 
 - Run the prefect flow (`flows/fullflow.py`) and add a scheduler, whether through the terminal or the prefect server UI.
-- Run the Shiny app using the terminal command `shiny run --reload app/app.py`
+- Run the Shiny app (dashboard) using the terminal command `shiny run --reload app/app.py`
