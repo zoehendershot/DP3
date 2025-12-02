@@ -2,3 +2,5 @@
 Dockerfile
 ds3022-github-events/
 .DS_Store
+fullflow.log
+flows/fullflow.log
